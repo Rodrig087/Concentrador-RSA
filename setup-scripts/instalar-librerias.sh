@@ -16,6 +16,12 @@ sudo pip3 install paho-mqtt
 sudo pip3 install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib
 sudo pip3 install --upgrade oauth2client
 
+# Instalacion de libreria scipy
+sudo apt-get install python3-scipy
+
+# Instalacion de matplotlib
+sudo apt install python3-matplotlib python3-tk
+
 # Instalacion libreria WirinPi
 cd /tmp
 wget https://project-downloads.drogon.net/wiringpi-latest.deb

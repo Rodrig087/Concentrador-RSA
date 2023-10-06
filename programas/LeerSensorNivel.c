@@ -63,7 +63,7 @@ int ConfiguracionPrincipal();
 void EnviarSolicitud(unsigned char id, unsigned char funcion, unsigned char subFuncion, unsigned char numDatos, unsigned char* payload);
 void RecibirRespuesta();
 void RecibirPyloadRespuesta(unsigned int numBytesPyload, unsigned char* pyloadRS485);
-void CrearArchivo(unsigned short idConc, unsigned short idNodo);
+char *CrearArchivo(unsigned short idConc, unsigned short idNodo);
 void GuardarTrama(unsigned char* tramaRS485, unsigned int longitudTrama); 	
 void LeerTemperaturaSensor(unsigned char* tramaDatosShort, unsigned int longitudTramaShort);									
 void ImprimirInformacion();
@@ -86,15 +86,7 @@ int main(int argc, char *argv[]){
 	
 	//Configuracion principal:
 	ConfiguracionPrincipal();
-	
-	//idPet = 0;
-	//funcionPet = 0;
-	//subFuncionPet = 0;
-	//numDatosPet = 0;
-		
-	
-	//Datos de prueba:
-	//idPet = 3;
+
 	funcionPet = 2;
 	subFuncionPet = 2;
 	numDatosPet = 0;
@@ -169,7 +161,7 @@ void ImprimirInformacion(){
 	LeerTemperaturaSensor(payloadResp, numDatosResp);
 	//system("python3 GraficarUltrasonido.py");
 			
-	Salir();
+	//Salir();
 	
 }
 
@@ -204,13 +196,10 @@ void EnviarSolicitud(unsigned char id, unsigned char funcion, unsigned char subF
         bcm2835_spi_transfer(payload[i]);
         bcm2835_delayMicroseconds(TIEMPO_SPI);
     }
-		
+	
 	//Envia el delimitador de fin de trama:
 	bcm2835_spi_transfer(0xF0);	
 	bcm2835_delayMicroseconds(TIEMPO_SPI);
-	
-	//Imprime la solicitud:
-	printf("\n>Solicitud enviada");
 	
 	//Enciende el LEDTEST:
 	digitalWrite (LEDTEST, HIGH);
@@ -244,17 +233,37 @@ void RecibirRespuesta(){
 	
 	//Se recupera el payload de la respuesta:
 	RecibirPyloadRespuesta(numDatosResp, payloadResp);	
-	CrearArchivo(IDConcentrador, idResp);
+	char *nombreArchivoCreado = CrearArchivo(IDConcentrador, idResp);
 	GuardarTrama(payloadResp, numDatosResp);
-		
-				
+	
 	//Apaga el LEDTEST:
 	digitalWrite (LEDTEST, LOW);
 	
 	//Imprime la informacion de solicitud y respuesta:
-	ImprimirInformacion();
+	//ImprimirInformacion();
 	
-	//Salir();
+
+	// Se ejecuta el programa de python que realiza el calculo utilizando correlacion cruzada:
+	if (nombreArchivoCreado != NULL) {
+        // Construye el comando Python con el nombre del archivo como argumento
+        char comando[100];
+        snprintf(comando, sizeof(comando), "python3 CorrelacionUltrasonido.py %s", nombreArchivoCreado);
+
+        // Ejecuta el comando Python
+        int resultado = system(comando);
+
+        // Verifica el resultado de la ejecución
+        if (resultado != 0) {
+            printf("\nHubo un error al ejecutar el programa Python.\n");
+        }
+
+        // Libera la memoria asignada
+        free(nombreArchivoCreado);
+    } else {
+        printf("Error al crear el archivo.\n");
+    }	
+				
+	Salir();
 		
 }
 
@@ -279,9 +288,10 @@ void RecibirPyloadRespuesta(unsigned int numBytesPyload, unsigned char* pyloadRS
 //**************************************************************************************************************************************
 //Manejo de archivos binarios:
 
-void CrearArchivo(unsigned short idConc, unsigned short idNodo){
+char *CrearArchivo(unsigned short idConc, unsigned short idNodo){
 
-	char nombreArchivo[60];
+	char pathArchivo[60];
+	char nombreArchivo[28];
 	char idArchivo[10];
 	char tiempoMedicion[7];
 	char tiempoMedicionStr[25];
@@ -300,17 +310,23 @@ void CrearArchivo(unsigned short idConc, unsigned short idNodo){
 	tiempoMedicion[5] = tm->tm_sec;													//Segundo 
 			
 	//Realiza la concatenacion para obtner el nombre del archivo:			
-	strcpy(nombreArchivo, "/home/rsa/Mediciones/Vertederos/");
-	sprintf(idArchivo, "C%0.2dN%0.2d_", idConc, idNodo); 
+	strcpy(pathArchivo, "/home/rsa/mediciones/vertederos/");
+	sprintf(idArchivo, "N%0.1d-V%0.1d_", idConc, idNodo); 
 	sprintf(tiempoMedicionStr, "%0.2d%0.2d%0.2d-%0.2d%0.2d%0.2d", tiempoMedicion[0], tiempoMedicion[1], tiempoMedicion[2], tiempoMedicion[3], tiempoMedicion[4], tiempoMedicion[5]);
 	strcpy(ext, ".dat");
 	strcat(nombreArchivo, idArchivo);
 	strcat(nombreArchivo, tiempoMedicionStr);
-	strcat(nombreArchivo, ext); 
+	strcat(pathArchivo, nombreArchivo); 
+	strcat(pathArchivo, ext); 
 	
 	//Crea el archivo binario:
-	printf("Se ha creado el archivo: %s\n", nombreArchivo);
-	fp = fopen (nombreArchivo, "wb+");
+	printf("Nombre del archivo: %s\n", nombreArchivo);
+	printf("Se ha creado el archivo: %s\n", pathArchivo);
+	fp = fopen (pathArchivo, "wb+");
+
+	// Devuelve el nombre del archivo
+    char *nombreArchivoCopiado = strdup(nombreArchivo); // Asegúrate de liberar la memoria cuando no la necesites.
+    return nombreArchivoCopiado;
 	
 }
 
@@ -360,7 +376,7 @@ void LeerTemperaturaSensor(unsigned char* tramaDatosShort, unsigned int longitud
 	//printf("\n Temperatura LSB: %#02X", temperaturaLSB);
 	//printf("\n Temperatura MSB: %#02X", temperaturaMSB);
 	//printf("\n Temperatura Raw: %#04X", temperaturaRaw);
-	printf("\n Temperatura sensor: %f", temperaturaSensor);
+	//printf("\n Temperatura sensor: %f", temperaturaSensor);
 	
 }
 

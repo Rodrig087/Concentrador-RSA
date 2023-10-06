@@ -33,7 +33,10 @@ Funcion 4: Test comunicacion
 #define TIEMPO_SPI 100
 #define FreqSPI 200000
 
+//Definicion del color de los mensajes
 #define RED   "\x1B[31m"
+#define ORANGE  "\033[33m"
+#define GREEN "\033[32m"
 #define RESET "\x1B[0m"
 
 //Declaracion de variables
@@ -74,6 +77,7 @@ void GuardarTrama(unsigned char* tramaRS485, unsigned int longitudTrama);
 void ImprimirInformacion();
 void Salir();						
 
+double elapsed_time;
 
 //**************************************************************************************************************************************
 //************************************************************** Principal *************************************************************
@@ -100,49 +104,15 @@ int main(int argc, char *argv[]) {
 		funcionPet = 4;
 		subFuncionPet = 1;
 		numDatosPet = 5;
-		/*
-		payloadPet[0] = 0xA1;
-		payloadPet[1] = 0xA2;
-		payloadPet[2] = 0xA3;
-		payloadPet[3] = 0xA4;
-		payloadPet[4] = 0xA5;
-		*/
 		payloadPet[0] = 1;
 		payloadPet[1] = 2;
 		payloadPet[2] = 3;
 		payloadPet[3] = 4;
 		payloadPet[4] = 5;
 	} else {
-		printf("Menu\n");
-		printf("  [1] Test trama corta\n");
-		printf("  [2] Test larga corta\n");
-		scanf(" %c", &menuNodo);            //Ojo: toma el valor del caracter, no el valor hexadecimal ('1'=0x31)
-		
-		switch (menuNodo){
-			case 0x31: 
-				printf("Case 1");
-				subFuncionPet = 1;
-				break;
-			case 0x32: 
-				printf("Case 2");
-				subFuncionPet = 2;
-				break;
-			default:
-				printf("Opcion invalida \n");
-				Salir();
-				break;
-		} 
-		
-		//subFuncionPet = 1;
 		funcionPet = 4;
+		subFuncionPet = 2;
 		numDatosPet = 5;
-		/*
-		payloadPet[0] = 0xB1;
-		payloadPet[1] = 0xB2;
-		payloadPet[2] = 0xB3;
-		payloadPet[3] = 0xB4;
-		payloadPet[4] = 0xB5;
-		*/
 		payloadPet[0] = 1;
 		payloadPet[1] = 2;
 		payloadPet[2] = 3;
@@ -157,11 +127,20 @@ int main(int argc, char *argv[]) {
 	sumEnviado = 0;
 	sumRecibido = 0;
 	
+	elapsed_time = 0;
+
+	clock_t start_time = clock();
 	EnviarSolicitud(idPet, funcionPet, subFuncionPet, numDatosPet, payloadPet);
 	
-	while(1){}
-	//Salir();	
-
+	while(1){
+		clock_t end_time = clock();
+		elapsed_time = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+		if (elapsed_time >= 5.0) {
+			printf("\n>Timeout: " RED "Nodo %d no responde\n" RESET, idPet);
+			Salir();
+		}
+	}
+	return 0;
 }
 //**************************************************************************************************************************************
 
@@ -215,10 +194,10 @@ void ImprimirInformacion(){
 	for (i=0;i<numDatosPet;i++){
         printf("%#02X ", payloadPet[i]);
     }
-	printf("\n Sumatoria control = %d", sumEnviado);
+	printf("\n Sumatoria control = " GREEN "%d OK" RESET, sumEnviado);
 	
 	//Imprime la respuesta:
-	printf("\nTrama recibida:");
+	printf("\n\nTrama recibida:");
 	printf("\n Cabecera: %d %d %d %d", idResp, funcionResp, subFuncionResp, numDatosResp);
 	printf("\n Payload: ");
 	for (i=0;i<numDatosResp;i++){
@@ -231,18 +210,18 @@ void ImprimirInformacion(){
 		//Test comunicacion SPI
 		if (subFuncionPet==1){
 			if (sumRecibido==1645){
-			printf("\n Sumatoria control = %d", sumRecibido);
+			printf("\n Sumatoria control = " GREEN "%d OK" RESET, sumRecibido);
 			}else{
-				printf("\n Sumatoria control = " RED "%d" RESET, sumRecibido);
+				printf("\n Sumatoria control = " ORANGE "%d Fail" RESET, sumRecibido);
 			}
 		}
 		//Test comunicacion RS485:
 		if (subFuncionPet==2){
 			//0XB*9=99dec
 			if (sumRecibido==(99+idPet)){
-			printf("\n Sumatoria control = %d", sumRecibido);
+			printf("\n Sumatoria control = " GREEN "%d OK" RESET, sumRecibido);
 			}else{
-				printf("\n Sumatoria control = " RED "%d" RESET, sumRecibido);
+				printf("\n Sumatoria control = " ORANGE "%d Fail" RESET, sumRecibido);
 			}		
 		}
 	}
@@ -327,8 +306,8 @@ void RecibirCabeceraRespuesta(){
 	} else {
 		//Recupera el payload enviado por los nodos.
 		RecibirPayloadNodos(numDatosResp, payloadResp);	
-		CrearArchivo(IDConcentrador, idResp);
-		GuardarTrama(payloadResp, numDatosResp);
+		//CrearArchivo(IDConcentrador, idResp);
+		//GuardarTrama(payloadResp, numDatosResp);
 	}
 	
 	//sumatoria de control. Disponible solo para las operaciones de testeo de la comunicacion SPI y RS485:
@@ -432,25 +411,11 @@ void GuardarTrama(unsigned char* tramaRS485, unsigned int longitudTrama){
 void Salir(){
 	bcm2835_spi_end();
 	bcm2835_close();
-	printf("\nAdios...\n");
+	printf("\n\nAdios...\n");
 	exit (-1);
 }
 //**************************************************************************************************************************************
 
 
-
-/*
-#include <stdio.h>
- 
-int main() {
-    char ch;
-    printf("Enter a character : ");
-    //read input from user to "ch"
-    scanf("%c", &ch);
-    //print to console
-    printf("You entered %c\n", ch);
-    return 0;
-}
-*/
 
 
