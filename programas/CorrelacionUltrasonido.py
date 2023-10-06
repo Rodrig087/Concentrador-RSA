@@ -3,6 +3,8 @@ from scipy import signal
 from scipy.signal import correlate
 from scipy.signal import butter,bessel,filtfilt, lfilter
 import math
+import sys
+import os
 
 #******************************************************************************
 #Constantes:
@@ -29,14 +31,17 @@ def RemuestrearOffset(arrayMuestras, offset):
     
 #*****************************************************************************
 #Carga la senal de referencia: 
-rutaArchivoReferencia = "/home/rsa/configuracion/"
+#usr = os.environ.get('USER')                        #Obtencion del usuario
+#path_base = '/home/'+usr+'/' 
+path_base = "/home/rsa/"
+rutaArchivoReferencia = path_base+"configuracion/"
 nombreArchivoReferencia = "Referencia_Btt-39-41-3.npy"
 pathArchivoReferencia = rutaArchivoReferencia + nombreArchivoReferencia
 referencia = np.load(pathArchivoReferencia)
 ##Abre el archivo binario::
-nombreArchivo2 = input("Ingrese el nombre del segundo archivo: ")
-rutaCarpeta = "/home/rsa/mediciones/vertederos/"
-path2 = rutaCarpeta + str(nombreArchivo2) + ".dat"
+nombreArchivo2 = sys.argv[1]
+rutaCarpeta = path_base + "mediciones/vertederos/"
+path2 = rutaCarpeta + nombreArchivo2 + ".dat"
 #Abre y convierte el segundo archivo:
 f = open(path2, "rb")
 tramaDatosShort = np.fromfile(f, np.int8, sizeTramaShort)
@@ -97,12 +102,12 @@ if (banProcesar=='s'):
     TOF = 1375 + desfaseTiempo + dA
     Distancia = 0.5*(TOF/1e6)*Vsonido*1000
     
-    print("Desfase [num muestras]: %d" % recovered_time_shift) 
-    print("Periodo muestreo [us]: %f" % (periodoResample)) 
-    print("Temperatura [gC]: %f" % temperaturaSensor) 
-    print("Vsonido [m/seg]: %f" % Vsonido)
+    #print("Desfase [num muestras]: %d" % recovered_time_shift) 
+    #print("Periodo muestreo [us]: %f" % (periodoResample)) 
     print("Desfase [us]: %f" % desfaseTiempo) 
-    print("TOF [us]: %f" % TOF) 
+    print("Temperatura [gC]: %f" % temperaturaSensor) 
+    #print("Vsonido [m/seg]: %f" % Vsonido)  
+    #print("TOF [us]: %f" % TOF) 
     print("Distancia [mm]: %f" % Distancia) 
     
 #******************************************************************************
